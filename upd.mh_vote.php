@@ -14,6 +14,7 @@ class Mh_vote_upd {
 		$sql[] = "INSERT INTO exp_modules (module_name, module_version, has_cp_backend) VALUES ('Mh_vote', '{$this->version}', 'y')";
 		$sql[] = "ALTER TABLE exp_channel_titles ADD `mh_votes` INT NOT NULL DEFAULT 0";
 		$sql[] = "CREATE TABLE `exp_mh_votes` ( `id` INT( 10 ) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY , `unique_id` VARCHAR( 255 ) NOT NULL, `vote_date` INT( 11 ), `voter_ip` VARCHAR( 16 ), `voter_useragent` VARCHAR ( 255 ) )";
+		$sql[] = "CREATE TABLE `exp_mh_vote_meta` ( `unique_id` varchar ( 255 ) NOT NULL PRIMARY KEY , `count` INT ( 11 ) NOT NULL)";
 		$sql[] = "CREATE TABLE `exp_mh_vote_params` ( `param_date` INT ( 11 ), `xid` VARCHAR( 40 ) NOT NULL, `params` VARCHAR( 255 ) NOT NULL )";
 		$sql[] = "INSERT INTO exp_modules (module_name, module_version, has_cp_backend) VALUES ('Mh_vote', '{$this->version}', 'y')";
 		$sql[] = "INSERT INTO exp_actions (class, method) VALUES ('Mh_vote', '_do_vote')";

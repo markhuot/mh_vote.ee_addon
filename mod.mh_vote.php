@@ -57,14 +57,103 @@ class Mh_vote {
 		$str = mh()->functions->form_declaration(array('hidden_fields' => array(
 			'XID' => $hash,
 			'ACT' => mh()->functions->fetch_action_id('Mh_vote', '_do_vote'),
-			'RET' => mh()->TMPL->fetch_param('return')?mh()->TMPL->fetch_param('return'):mh()->functions->fetch_current_uri(),
-			'id' => mh()->TMPL->fetch_param('id')
+			'RET' => mh()->TMPL->fetch_param('return')?mh()->TMPL->fetch_param('return'):mh()->functions->fetch_current_uri()
 		)));
 		$str.= $tagdata;
 		$str.= '</form>';
 		
 		// return form
 		return $str;
+	}
+	
+	
+	
+	
+	public function trailing()
+	{
+		$tagdata = mh()->TMPL->tagdata;
+		
+		$id = mh()->TMPL->fetch_param('id');
+		$me = mh()->db->get_where('exp_mh_vote_meta', array('unique_id' => $id))->row();
+		
+		if (!$me)
+		{
+			return '';
+		}
+		
+		mh()->db->where('count > '.$me->count);
+		mh()->db->orderby('count asc');
+		mh()->db->limit(1);
+		$result = mh()->db->get('mh_vote_meta')->row();
+		
+		if ($result)
+		{
+			return mh()->TMPL->parse_variables($tagdata, array(array(
+				'id' => $result->unique_id,
+				'trailing_by' => $result->count-$me->count,
+				'pluralize' => $me->count-$result->count>1?'s':''
+			)));
+		}
+		
+		else
+		{
+			$no_results_match = LD.'if is_first'.RD.'(.*?)'.LD.'\/if'.RD;
+			if (preg_match('/'.$no_results_match.'/sm', $tagdata))
+			{
+				$tagdata = preg_replace('/^.*'.$no_results_match.'?.*$/sm', '$1', $tagdata);
+			}
+			else
+			{
+				$tagdata = '';
+			}
+		}
+		
+		return $tagdata;
+	}
+	
+	
+	
+	
+	public function leading()
+	{
+		$tagdata = mh()->TMPL->tagdata;
+		
+		$id = mh()->TMPL->fetch_param('id');
+		$me = mh()->db->get_where('exp_mh_vote_meta', array('unique_id' => $id))->row();
+		
+		if (!$me)
+		{
+			return '';
+		}
+		
+		mh()->db->where('count < '.$me->count);
+		mh()->db->orderby('count desc');
+		mh()->db->limit(1);
+		$result = mh()->db->get('mh_vote_meta')->row();
+		
+		if ($result)
+		{
+			return mh()->TMPL->parse_variables($tagdata, array(array(
+				'id' => $result->unique_id,
+				'leading_by' => $me->count-$result->count,
+				'pluralize' => $me->count-$result->count>1?'s':''
+			)));
+		}
+		
+		else
+		{
+			$no_results_match = LD.'if is_last'.RD.'(.*?)'.LD.'\/if'.RD;
+			if (preg_match('/'.$no_results_match.'/sm', $tagdata))
+			{
+				$tagdata = preg_replace('/^.*'.$no_results_match.'?.*$/sm', '$1', $tagdata);
+			}
+			else
+			{
+				$tagdata = '';
+			}
+		}
+		
+		return $tagdata;
 	}
 	
 	
@@ -109,6 +198,22 @@ class Mh_vote {
 			'voter_ip' => mh()->input->ip_address(),
 			'voter_useragent' => mh()->input->server('HTTP_USER_AGENT')
 		));
+		
+		// update meta
+		if (($count = mh()->db->where('unique_id', $params['id'])->count_all_results('mh_votes')) == 1)
+		{
+			mh()->db->insert('exp_mh_vote_meta', array(
+				'count' => $count,
+				'unique_id' => $params['id']
+			));
+		}
+		
+		else
+		{
+			mh()->db->update('exp_mh_vote_meta', array(
+				'count' => $count
+			), array('unique_id' => $params['id']));
+		}
 		
 		mh()->load->helper('url');
 		redirect(mh()->input->post('RET'));
