@@ -1,0 +1,14 @@
+{exp:mh_vote:form id="{segment_2}" use_captcha="yes" limit="day"}
+	{if voted}You've already voted once today, please come back again tomorrow to vote again.{/if}
+	{if captcha}
+		<p class="captcha-wrap">
+			<label for="captcha">Please fill in this CAPTCHA field:</label>
+			<input type="text" name="captcha" id="captcha" value="{captcha_word}" maxlength="20" />
+			{captcha}
+		</p>						
+	{/if}
+	
+	<p>
+		<input type="submit" value="Vote for Me!" />
+	</p>
+{/exp:mh_vote:form}
