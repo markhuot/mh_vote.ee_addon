@@ -21,15 +21,7 @@ class Mh_vote {
 		// check limit
 		if (in_array(mh()->TMPL->fetch_param('limit'), array('minute', 'hour', 'day', 'week', 'month', 'year')))
 		{
-			$ip = mh()->db->where('voter_ip', mh()->input->ip_address());
-			$user_agent = mh()->db->where('voter_useragent', mh()->input->server('HTTP_USER_AGENT'));
-			
-			$min = strtotime(date('Y-m-d 00:00:00'));
-			mh()->db->where("vote_date > {$min}");
-			
-			$existing = mh()->db->get('exp_mh_votes');
-			
-			if ($existing->num_rows > 0)
+			if (!$this->_validate_limit(mh()->TMPL->fetch_param('limit')))
 			{
 				$no_results_match = LD.'if voted'.RD.'(.*?)'.LD.'\/if'.RD;
 				if (preg_match('/'.$no_results_match.'/sm', $tagdata))
@@ -144,6 +136,46 @@ class Mh_vote {
 		OR date < UNIX_TIMESTAMP()-7200");
 		
 		return TRUE;
+	}
+	
+	
+	
+	
+	public function _validate_limit($limit)
+	{
+		$ip = mh()->db->where('voter_ip', mh()->input->ip_address());
+		$user_agent = mh()->db->where('voter_useragent', mh()->input->server('HTTP_USER_AGENT'));
+		
+		switch ($limit)
+		{
+			case 'minute':
+				$min = strtotime(date('Y-m-d H:i:00'));
+				break;
+			
+			case 'hour':
+				$min = strtotime(date('Y-m-d H:00:00'));
+				break;
+			
+			case 'day':
+				$min = strtotime(date('Y-m-d 00:00:00'));
+				break;
+			
+			case 'week':
+				$min = strtotime(date('Y-m-d 00:00:00', strtotime('-'.date('w').' days')));
+				break;
+			
+			case 'month':
+				$min = strtotime(date('Y-m-01 00:00:00'));
+				break;
+			
+			case 'year':
+				$min = strtotime(date('Y-01-01 00:00:00'));
+				break;
+		}
+		
+		
+		mh()->db->where("vote_date > {$min}");
+		return mh()->db->get('exp_mh_votes')->num_rows==0;
 	}
 
 }
