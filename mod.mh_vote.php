@@ -8,6 +8,7 @@ class Mh_vote {
 
 
 	public $me = array();
+	public $places = array();
 	
 	
 	
@@ -89,8 +90,7 @@ class Mh_vote {
 			return mh()->TMPL->parse_variables($tagdata, array(array()));
 		}
 		
-		mh()->db->orderby('count desc');
-		$places = mh()->db->get('mh_vote_meta');
+		$places = $this->_places();
 		$results = $places->result();
 		
 		$leading = $this->_leading($results, $id);
@@ -146,7 +146,47 @@ class Mh_vote {
 		)));
 
 		return $tagdata;
-	}	
+	}
+	
+	
+	
+	
+	public function place()
+	{
+		list($place, $total_places) = $this->_place($this->_places()->result(), $this->_id(mh()->TMPL->tagparams));
+		$digits = str_split($place);
+		
+		if (!($tagdata = mh()->TMPL->tagdata))
+		{
+			return $place;
+		}
+		
+		preg_match_all('/'.LD.'mh_vote:digits(.*?)'.RD.'(.*?)'.LD.'\/mh_vote:digits'.RD.'/sm', $tagdata, $digit_tagdata);
+		if ($digit_tagdata)
+		{
+			foreach ($digit_tagdata[0] as $key => $full_match)
+			{
+				$params = mh()->functions->assign_parameters($digit_tagdata[1][$key]);
+				
+				$parsed = '';
+				foreach ($digits as $digit)
+				{
+					$parsed.= mh()->TMPL->parse_variables($digit_tagdata[2][$key], array(array('mh_vote:digit' => $digit)));
+				}
+				
+				$parsed = trim($parsed);
+				
+				if (isset($params['backspace']) && is_numeric($params['backspace']))
+				{
+					$parsed = substr($parsed, 0, strlen($parsed)-$params['backspace']);
+				}
+				
+				$tagdata = str_replace($full_match, $parsed, $tagdata);
+			}
+		}
+		
+		return $tagdata;
+	}
 	
 	
 	
@@ -338,14 +378,39 @@ class Mh_vote {
 	
 	
 	
-	public function _me($id)
+	public function _me($id, $results=FALSE)
 	{
 		if (!isset($this->me[$id]))
 		{
-			$this->me[$id] = mh()->db->get_where('exp_mh_vote_meta', array('unique_id' => $id))->row();
+			if ($results !== FALSE && is_array($results))
+			{
+				foreach ($results as $result)
+				{
+					if ($result->unique_id == $id)
+					{
+						$this->me[$id] = $result;
+					}
+				}
+			}
+			
+			else
+			{
+				$this->me[$id] = mh()->db->get_where('exp_mh_vote_meta', array('unique_id' => $id))->row();
+			}
 		}
 		
-		return $this->me[$id];
+		return @$this->me[$id];
+	}
+	
+	
+	
+	
+	public function _places()
+	{
+		if ($this->places) return $this->places;
+		
+		mh()->db->orderby('count desc');
+		return ($this->places = mh()->db->get('mh_vote_meta'));
 	}
 	
 	
@@ -353,23 +418,29 @@ class Mh_vote {
 	
 	public function _place($results, $id)
 	{
-		$place = 1;
-		$my_place = 1;
+		$places = 1;
+		$my_place = FALSE;
+		$me = $this->_me($id, $results);
 		
 		foreach ($results as $count => $result)
 		{
-			if (isset($results[$count-1]) && $result->count < $results[$count-1]->count)
+			if ($result->count != @$me->count)
 			{
-				$place++;
+				$places++;
 			}
 			
 			if ($result->unique_id == $id)
 			{
-				$my_place = $place;
+				$my_place = $places;
 			}
 		}
 		
-		return array($my_place, $place);
+		if (!$my_place)
+		{
+			$my_place = $places;
+		}
+		
+		return array($my_place, $places);
 	}
 	
 	
