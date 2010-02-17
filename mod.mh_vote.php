@@ -215,6 +215,27 @@ class Mh_vote {
 			), array('unique_id' => $params['id']));
 		}
 		
+		// store it somewhere?
+		if (($store_in = @$params['store_in']) && ($store_key = @$params['store_key']))
+		{
+			$store_with = @$params['store_with']?$params['store_with']:'entry';
+			
+			switch ($store_with)
+			{
+				case 'member':
+					$field_id = mh()->db->get_where('exp_member_fields', array('m_field_name' => $store_in))->row('m_field_id');
+					mh()->db->update('exp_member_data', array('m_field_id_'.$field_id => $count), array('member_id' => $store_key));
+					break;
+				
+				case 'entry':
+					$field_id = mh()->db->get_where('exp_channel_fields', array('field_name' => $store_in))->row('field_id');
+					mh()->db->update('exp_channel_data', array('field_id_'.$field_id => $count), array('entry_id' => $store_key));
+					break;
+			}
+		}
+		
+		if (!session_id()) session_start();
+		$_SESSION['mh_vote'] = 'voted';
 		mh()->load->helper('url');
 		redirect(mh()->input->post('RET'));
 		exti();
