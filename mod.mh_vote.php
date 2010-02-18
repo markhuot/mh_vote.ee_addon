@@ -80,57 +80,82 @@ class Mh_vote {
 	
 	public function stats()
 	{
+		// pull tagdata from EE
 		$tagdata = mh()->TMPL->tagdata;
 		
+		// parse the ID we're requesting
 		$id = $this->_id(mh()->TMPL->tagparams);
+		
+		// grab the row we'd like results about
 		$me = $this->_me($id);
 		
+		// No results? Strip out variables and be done.
 		if (!$me)
 		{
 			return mh()->TMPL->parse_variables($tagdata, array(array()));
 		}
 		
+		// get the ranking DB object
 		$places = $this->_places();
+		
+		// get the array of rankings from the object, we
+		// keep the object around so we can query
+		// `num_rows` without having to `count()` an array.
 		$results = $places->result();
 		
+		// get the variables for the current ranking
 		$leading = $this->_leading($results, $id);
 		$trailing = $this->_trailing($results, $id);
 		$tied = $this->_tied($results, $id);
 		list($place, $total_places) = $this->_place($results, $id);
 		
+		// oh god this is sexy, loop through all three of
+		// our tag pairs and replace out their contents
 		foreach (array('leading', 'trailing', 'tied') as $dir)
 		{
+			// variable variables are messy but awesome,
+			// limit the amount of times we use them here
+			// assigining a reference
 			$adjacent = $$dir;
 			
+			// find the loops
 		 	preg_match_all('/'.LD.'mh_vote:'.$dir.'(.*?)'.RD.'(.*?)'.LD.'\/mh_vote:'.$dir.RD.'/sm', $tagdata, $act_tagdata);
 		 	if ($act_tagdata)
 		 	{
+		 		// loop through each instance of the tag pair
 		 		foreach ($act_tagdata[0] as $key => $full_match)
 		 		{
+		 			// convert our params to an array, if there are any
 		 			$params = mh()->functions->assign_parameters($act_tagdata[1][$key]);
 		 			
+		 			// loop through each row returned from the database
+		 			// and tack them on to the result
 		 			$parsed = '';
 		 			foreach ($adjacent as $adjacent_votee)
 		 			{
 		 				$parsed.= mh()->TMPL->parse_variables($act_tagdata[2][$key], array($this->_data(@$adjacent_votee->unique_id)));
 		 			}
 		 			
+		 			// trim the result, so we can properly backspace
 		 			$parsed = trim($parsed);
 		 			
+		 			// if we should backspace, do it!
 		 			if (isset($params['backspace']) && is_numeric($params['backspace']))
 		 			{
 		 				$parsed = substr($parsed, 0, strlen($parsed)-$params['backspace']);
 		 			}
 		 			
+		 			// update the raw with our result
 		 			$tagdata = str_replace($full_match, $parsed, $tagdata);
 		 		}
 		 	}
 		}
 		
-		
+		// figure out how far ahead/behind we are
 		$leading_by = $me->count - @$leading[0]->count;
 		$trailing_by = @$trailing[0]->count - $me->count;
 		
+		// parse out the single tag variables
 		$tagdata = mh()->TMPL->parse_variables($tagdata, array(array(
 			'mh_vote:place' => $place,
 			'mh_vote:is_tied' => count($tied)>0,
@@ -144,7 +169,8 @@ class Mh_vote {
 			'mh_vote:trailing_count' => count($trailing),
 			'mh_vote:to_lead' => $trailing_by>0?$trailing_by+1:0
 		)));
-
+		
+		// return the awesomeness!
 		return $tagdata;
 	}
 	
@@ -153,14 +179,19 @@ class Mh_vote {
 	
 	public function place()
 	{
+		// get place
 		list($place, $total_places) = $this->_place($this->_places()->result(), $this->_id(mh()->TMPL->tagparams));
-		$digits = str_split($place);
 		
+		// if there's no tagdata then just return the place
 		if (!($tagdata = mh()->TMPL->tagdata))
 		{
 			return $place;
 		}
 		
+		// split place into discrete digits
+		$digits = str_split($place);
+		
+		// replace out the digits loop
 		preg_match_all('/'.LD.'mh_vote:digits(.*?)'.RD.'(.*?)'.LD.'\/mh_vote:digits'.RD.'/sm', $tagdata, $digit_tagdata);
 		if ($digit_tagdata)
 		{
@@ -185,7 +216,11 @@ class Mh_vote {
 			}
 		}
 		
-		return $tagdata;
+		// return the place and total_places within a loop
+		return mh()->TMPL->parse_variables($tagdata, array(array(
+			'place' => $place,
+			'total_places' => $total_places
+		)));
 	}
 	
 	
@@ -215,7 +250,7 @@ class Mh_vote {
 		$params = unserialize($params);
 		
 		// clear old params
-		mh()->db->delete('exp_mh_vote_params', '`param_date` < '.time());
+		mh()->db->delete('exp_mh_vote_params', '`param_date` < '.time()-7200);
 		
 		// check captcha
 		if ($params['use_captcha'] == 'yes' && !$this->_validate_captcha())
