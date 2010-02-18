@@ -256,7 +256,16 @@ class Mh_vote {
 		$params = unserialize($params);
 		
 		// clear old params
-		mh()->db->delete('exp_mh_vote_params', '`param_date` < '.time()-7200);
+		//mh()->db->delete('exp_mh_vote_params', '`param_date` < '.time()-7200);
+		
+		// check voted
+		if (in_array($params['limit'], array('minute', 'hour', 'day', 'week', 'month', 'year')))
+		{
+			if (!$this->_validate_limit($params['limit']))
+			{
+				return mh()->output->fatal_error('<h3>You&rsquo;ve already voted once today.</h3><p>Come back again tomorrow to vote again.</p><p><a href="/competition/#how-do-votes-work">I haven&rsquo;t, you&rsquo;re wrong!</a></p>');
+			}
+		}
 		
 		// check captcha
 		if ($params['use_captcha'] == 'yes' && !$this->_validate_captcha())
