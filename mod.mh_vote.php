@@ -161,13 +161,19 @@ class Mh_vote {
 			'mh_vote:is_tied' => count($tied)>0,
 			'mh_vote:suffix' => date('S', strtotime("2000-01-{$place}")),
 			'mh_vote:votes' => $me->count,
+			'mh_vote:votes_plural' => $me->count>1,
 			'mh_vote:is_first' => $place==1,
 			'mh_vote:leading_by' => $leading_by>0?$leading_by:0,
+			'mh_vote:leading_by_plural' => $leading_by>1,
 			'mh_vote:leading_count' => count($leading),
+			'mh_vote:leading_count_plural' => count($leading)>1,
 			'mh_vote:is_last' => $place==$total_places,
 			'mh_vote:trailing_by' => $trailing_by>0?$trailing_by:0,
+			'mh_vote:trailing_by_plural' => $trailing_by>1,
 			'mh_vote:trailing_count' => count($trailing),
-			'mh_vote:to_lead' => $trailing_by>0?$trailing_by+1:0
+			'mh_vote:trailing_count_plural' => count($trailing)>1,
+			'mh_vote:to_lead' => $trailing_by>0?$trailing_by+1:0,
+			'mh_vote:to_lead' => $trailing_by+1>1
 		)));
 		
 		// return the awesomeness!
